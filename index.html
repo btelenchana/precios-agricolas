@@ -37,6 +37,24 @@ main{padding:18px 16px 48px;max-width:860px;margin:0 auto;}
 .chip:hover{border-color:var(--verde);color:var(--verde);background:var(--verde-c);}
 .chip.on{background:var(--verde);border-color:var(--verde);color:#fff;font-weight:600;}
 .chip.periodo.on{background:var(--verde-o);border-color:var(--verde-o);}
+
+/* SELECTORES DE PERÍODO */
+.periodo-selectores{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;}
+.sel-wrap{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;}
+.sel-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--gris);}
+.sel-wrap select{
+  appearance:none;-webkit-appearance:none;
+  padding:9px 36px 9px 14px;
+  border:1.5px solid #D1D5DB;
+  border-radius:10px;
+  background:var(--blanco) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 12px center;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  color:var(--texto);cursor:pointer;width:100%;
+  transition:border-color .15s;
+}
+.sel-wrap select:focus{outline:none;border-color:var(--verde);}
+.sel-wrap select option{font-size:13px;}
+.periodo-hint{font-size:11px;color:var(--gris);margin-top:6px;font-style:italic;}
 .hint{font-size:11px;color:var(--gris);margin-top:6px;font-style:italic;}
 
 /* CARD */
@@ -157,7 +175,8 @@ let grafica = null;
 
 // Selecciones actuales
 let productosSeleccionados = new Set([PRODUCTOS[0].nombre]);
-let periodosSeleccionados  = new Set(); // vacío = últimos 15 días
+let anioSeleccionado = 'todos';
+let mesSeleccionado  = 'todos';
 
 // ── Cargar datos ─────────────────────────────
 async function cargarDatos() {
@@ -245,30 +264,40 @@ function procesarCSV(csv) {
     return {key:k, label:fmtMesAnio(d), año:+y, mes:+m};
   });
 
-  // Por defecto seleccionar el mes más reciente
-  if(periodosDisponibles.length>0) periodosSeleccionados.add(periodosDisponibles[0].key);
+  // Por defecto: año y mes más reciente
+  if(periodosDisponibles.length>0){
+    anioSeleccionado = String(periodosDisponibles[0].año);
+    mesSeleccionado  = String(periodosDisponibles[0].mes).padStart(2,'0');
+  }
 }
 
-// ── Obtener fechas del período seleccionado ───
+// ── Obtener fechas según selectores ──────────
 function obtenerFechas() {
-  if(periodosSeleccionados.size===0){
-    // Sin selección → últimos 15 días
-    const fechas=[];
-    const hoy=new Date();
-    for(let d=14;d>=0;d--){
-      const f=new Date(hoy); f.setDate(hoy.getDate()-d);
-      fechas.push(fmtClave(f));
-    }
-    return fechas;
+  // Últimos 15 días si ambos son "todos" y no hay histórico extenso
+  if(anioSeleccionado==='todos' && mesSeleccionado==='todos'){
+    // Todos los datos disponibles
+    const todasFechas = new Set();
+    PRODUCTOS.forEach(p=>{
+      Object.keys(todosLosDatos[p.nombre]||{}).forEach(k=>todasFechas.add(k));
+    });
+    return Array.from(todasFechas).sort();
   }
-  // Con selección → todos los días de los meses seleccionados
-  const fechas=new Set();
-  periodosSeleccionados.forEach(key=>{
-    const [y,m]=key.split("-");
-    const diasEnMes=new Date(+y,+m,0).getDate();
-    for(let d=1;d<=diasEnMes;d++){
-      fechas.add(`${y}-${m}-${String(d).padStart(2,"0")}`);
-    }
+  // Construir rango de fechas
+  const fechas = new Set();
+  const años = anioSeleccionado==='todos'
+    ? [...new Set(periodosDisponibles.map(p=>p.año))]
+    : [+anioSeleccionado];
+  const meses = mesSeleccionado==='todos'
+    ? [1,2,3,4,5,6,7,8,9,10,11,12]
+    : [+mesSeleccionado];
+  años.forEach(y=>{
+    meses.forEach(m=>{
+      const mm=String(m).padStart(2,"0");
+      const diasEnMes=new Date(y,m,0).getDate();
+      for(let d=1;d<=diasEnMes;d++){
+        fechas.add(`${y}-${mm}-${String(d).padStart(2,"0")}`);
+      }
+    });
   });
   return Array.from(fechas).sort();
 }
@@ -289,9 +318,12 @@ function renderizarTodo() {
         <div class="hint">Toca un producto para agregarlo o quitarlo de la comparación</div>
       </div>
       <div class="filtro-bloque">
-        <div class="sec-label">Período — selecciona uno o varios meses</div>
-        <div class="chips" id="chips-periodos"></div>
-        <div class="hint">Sin selección muestra los últimos 15 días</div>
+        <div class="sec-label">Período</div>
+        <div class="periodo-selectores">
+          <div class="sel-wrap"><span class="sel-label">Año</span><select id="sel-anio" onchange="onCambiarPeriodo()"></select></div>
+          <div class="sel-wrap"><span class="sel-label">Mes</span><select id="sel-mes" onchange="onCambiarPeriodo()"></select></div>
+        </div>
+        <div class="periodo-hint">Selecciona "Todos" en año y mes para ver el histórico completo</div>
       </div>
     </div>
 
@@ -327,40 +359,30 @@ function renderizarTodo() {
     cpEl.appendChild(b);
   });
 
-  // Chips períodos
-  const cpPer=document.getElementById("chips-periodos");
-  // Chip "Últimos 15 días"
-  const b15=document.createElement("button");
-  b15.className="chip periodo"+(periodosSeleccionados.size===0?" on":"");
-  b15.textContent="Últimos 15 días";
-  b15.id="chip-15d";
-  b15.onclick=()=>{
-    periodosSeleccionados.clear();
-    document.querySelectorAll(".chip.periodo").forEach(c=>c.classList.remove("on"));
-    b15.classList.add("on");
-    actualizarGrafica();
-  };
-  cpPer.appendChild(b15);
+  // Selectores de año y mes
+  const años = ['todos', ...[...new Set(periodosDisponibles.map(p=>String(p.año)))].sort().reverse()];
+  const meses = [
+    {val:'todos',label:'Todos los meses'},
+    {val:'01',label:'Enero'},{val:'02',label:'Febrero'},{val:'03',label:'Marzo'},
+    {val:'04',label:'Abril'},{val:'05',label:'Mayo'},{val:'06',label:'Junio'},
+    {val:'07',label:'Julio'},{val:'08',label:'Agosto'},{val:'09',label:'Septiembre'},
+    {val:'10',label:'Octubre'},{val:'11',label:'Noviembre'},{val:'12',label:'Diciembre'}
+  ];
 
-  periodosDisponibles.forEach(per=>{
-    const b=document.createElement("button");
-    b.className="chip periodo"+(periodosSeleccionados.has(per.key)?" on":"");
-    b.textContent=per.label;
-    b.onclick=()=>{
-      document.getElementById("chip-15d").classList.remove("on");
-      if(periodosSeleccionados.has(per.key)){
-        periodosSeleccionados.delete(per.key);
-        b.classList.remove("on");
-        if(periodosSeleccionados.size===0){
-          document.getElementById("chip-15d").classList.add("on");
-        }
-      } else {
-        periodosSeleccionados.add(per.key);
-        b.classList.add("on");
-      }
-      actualizarGrafica();
-    };
-    cpPer.appendChild(b);
+  const selAnio = document.getElementById("sel-anio");
+  años.forEach(a=>{
+    const opt=document.createElement("option");
+    opt.value=a; opt.textContent=a==='todos'?'Todos los años':a;
+    if(String(a)===String(anioSeleccionado)) opt.selected=true;
+    selAnio.appendChild(opt);
+  });
+
+  const selMes = document.getElementById("sel-mes");
+  meses.forEach(m=>{
+    const opt=document.createElement("option");
+    opt.value=m.val; opt.textContent=m.label;
+    if(m.val===mesSeleccionado || (m.val==='todos'&&mesSeleccionado==='todos')) opt.selected=true;
+    selMes.appendChild(opt);
   });
 
   actualizarGrafica();
@@ -538,6 +560,12 @@ function mostrarError(msg){
       <p style="font-size:13px">${msg}<br><br>
       Verifica que el ID del archivo sea correcto y que el Sheets sea público.</p>
     </div>`;
+}
+
+function onCambiarPeriodo(){
+  anioSeleccionado = document.getElementById("sel-anio").value;
+  mesSeleccionado  = document.getElementById("sel-mes").value;
+  actualizarGrafica();
 }
 
 cargarDatos();
