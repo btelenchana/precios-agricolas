@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Precios Agrícolas — Izamba / Chunchibamba</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --verde:       #1D9E75;
+    --verde-oscuro:#0F6E56;
+    --verde-claro: #E1F5EE;
+    --tierra:      #8B5E3C;
+    --tierra-claro:#F5EDE4;
+    --gris:        #6B7280;
+    --gris-claro:  #F3F4F6;
+    --blanco:      #FFFFFF;
+    --texto:       #1A1A1A;
+    --sube:        #059669;
+    --baja:        #DC2626;
+    --estable:     #D97706;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #F7FAF8;
+    color: var(--texto);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--verde-oscuro);
+    padding: 20px 24px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(15,110,86,0.3);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .logo {
+    width: 36px; height: 36px;
+    background: var(--verde);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  header h1 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.3px;
+  }
+  header p {
+    font-size: 11px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 2px;
+  }
+  .ultima-act {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 6px;
+  }
+
+  /* ── CONTENIDO ── */
+  main { padding: 20px 16px 40px; max-width: 700px; margin: 0 auto; }
+
+  /* ── SELECTOR DE PRODUCTO ── */
+  .selector-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--gris);
+    margin-bottom: 10px;
+  }
+  .productos-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .btn-prod {
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #D1D5DB;
+    background: var(--blanco);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gris);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn-prod:hover {
+    border-color: var(--verde);
+    color: var(--verde);
+    background: var(--verde-claro);
+  }
+  .btn-prod.activo {
+    background: var(--verde);
+    border-color: var(--verde);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* ── TARJETA PRINCIPAL ── */
+  .card {
+    background: var(--blanco);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    margin-bottom: 16px;
+  }
+
+  /* ── RESUMEN DE PRECIO ── */
+  .resumen {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .precio-actual {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .precio-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--gris);
+  }
+  .precio-valor {
+    font-size: 38px;
+    font-weight: 700;
+    color: var(--verde-oscuro);
+    line-height: 1;
+    font-family: 'DM Mono', monospace;
+  }
+  .precio-unidad {
+    font-size: 12px;
+    color: var(--gris);
+    margin-top: 2px;
+  }
+  .variacion-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  .variacion-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+  }
+  .variacion-badge.sube  { background: #DCFCE7; color: var(--sube); }
+  .variacion-badge.baja  { background: #FEE2E2; color: var(--baja); }
+  .variacion-badge.igual { background: #FEF3C7; color: var(--estable); }
+  .variacion-badge.nd    { background: var(--gris-claro); color: var(--gris); }
+  .variacion-desc {
+    font-size: 11px;
+    color: var(--gris);
+  }
+
+  /* ── GRÁFICA ── */
+  .grafica-wrap {
+    position: relative;
+    height: 220px;
+    margin-bottom: 8px;
+  }
+
+  /* ── STATS ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .stat-box {
+    background: var(--gris-claro);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-box.highlight { background: var(--verde-claro); }
+  .stat-val {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--verde-oscuro);
+    font-family: 'DM Mono', monospace;
+  }
+  .stat-lbl {
+    font-size: 10px;
+    color: var(--gris);
+    margin-top: 3px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── TABLA RESUMEN ── */
+  .tabla-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--verde-oscuro);
+    color: #fff;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  tbody tr:nth-child(even) { background: var(--verde-claro); }
+  tbody tr:nth-child(odd)  { background: var(--blanco); }
+  tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #E5E7EB;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  tbody td:first-child {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--texto);
+  }
+  .td-sube  { color: var(--sube);    font-weight: 700; }
+  .td-baja  { color: var(--baja);    font-weight: 700; }
+  .td-igual { color: var(--estable); font-weight: 700; }
+
+  /* ── ESTADO VACÍO ── */
+  .vacio {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gris);
+  }
+  .vacio-icon { font-size: 40px; margin-bottom: 12px; }
+  .vacio h3 { font-size: 16px; margin-bottom: 6px; color: var(--texto); }
+  .vacio p  { font-size: 13px; line-height: 1.5; }
+
+  /* ── LOADING ── */
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--gris);
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--verde-claro);
+    border-top-color: var(--verde);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── NOTA CONFIG ── */
+  .nota-config {
+    background: var(--tierra-claro);
+    border-left: 4px solid var(--tierra);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #5C3D20;
+    margin-bottom: 20px;
+  }
+  .nota-config strong { font-weight: 700; }
+  .nota-config code {
+    background: rgba(139,94,60,0.15);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: var(--gris);
+  }
+
+  @media (max-width: 400px) {
+    .precio-valor { font-size: 30px; }
+    .stats-row { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .stat-val { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="logo">🌱</div>
+    <div>
+      <h1>Precios Agrícolas</h1>
+      <p>Izamba · Chunchibamba · Mercado Mayorista Ambato</p>
+    </div>
+  </div>
+  <div class="ultima-act" id="ultima-act">Cargando datos...</div>
+</header>
+
+<main>
+  <!-- NOTA DE CONFIGURACIÓN — quitar cuando pongas tu ID real -->
+  <div class="nota-config" id="nota-config">
+    <strong>⚙️ Configuración requerida:</strong> Reemplaza el valor de
+    <code>ID_SHEET</code> en el código con el ID de tu archivo Google Sheets,
+    y el de <code>NOMBRE_HOJA</code> con el nombre exacto de tu hoja
+    (por ejemplo <code>Datos_Largo</code>). Luego asegúrate de que el archivo
+    sea público o accesible con el enlace.
+  </div>
+
+  <div id="contenido-principal">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Cargando precios del mercado...</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Precios referenciales · Zona norte de Ambato · Actualizado diariamente
+</footer>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN — edita estos dos valores
+// ════════════════════════════════════════════════════════════
+const ID_SHEET    = "1fmGSrHQbcaLY5K7MWNDwsB_pvW0kQlV0p4Vm1G-ZLzQ";        // ID de tu Google Sheets
+const NOMBRE_HOJA = "Datos_Largo";       // nombre exacto de la hoja
+// ════════════════════════════════════════════════════════════
+
+const PRODUCTOS = [
+  { nombre: "Lechuga",          unidad: "Cartón 12u" },
+  { nombre: "Col blanca",       unidad: "Mula"       },
+  { nombre: "Coliflor",         unidad: "Mula"       },
+  { nombre: "Cilantro",         unidad: "Carga"      },
+  { nombre: "Brócoli",          unidad: "Unidad"     },
+  { nombre: "Perejil",          unidad: "Carga"      },
+  { nombre: "Apio",             unidad: "Carga"      },
+  { nombre: "Remolacha",        unidad: "Saco"       },
+  { nombre: "Pimiento",         unidad: "Saco"       },
+  { nombre: "Tomate riñón",     unidad: "Cartón"     },
+  { nombre: "Cebolla colorada", unidad: "Saco"       },
+  { nombre: "Pepinillo",        unidad: "Saco"       },
+  { nombre: "Lechuguín",        unidad: "Funda 12u"  }
+];
+
+let datosProcesados = {}; // { "Lechuga": { "2026-06-26": [4.5, 4.8] } }
+let grafica = null;
+let productoActivo = PRODUCTOS[0].nombre;
+
+// ── Cargar datos desde Google Sheets (CSV público) ───────────
+async function cargarDatos() {
+  const url = `https://docs.google.com/spreadsheets/d/${ID_SHEET}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(NOMBRE_HOJA)}`;
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error("No se pudo acceder al archivo");
+    const texto = await resp.text();
+    procesarCSV(texto);
+    renderizarTodo();
+  } catch (err) {
+    mostrarError(err.message);
+  }
+}
+
+// ── Parsear CSV de Google Sheets ─────────────────────────────
+function procesarCSV(csv) {
+  const lineas = csv.trim().split("\n");
+  // encabezados: Fecha, Producto, Precio_USD, Unidad, Fuente, Observación, Periodo/Sector
+  datosProcesados = {};
+  PRODUCTOS.forEach(p => { datosProcesados[p.nombre] = {}; });
+
+  const hace15 = new Date();
+  hace15.setDate(hace15.getDate() - 15);
+
+  for (let i = 1; i < lineas.length; i++) {
+    const cols = parsearLinea(lineas[i]);
+    if (cols.length < 3) continue;
+
+    const fechaStr = cols[0].replace(/"/g, "").trim();
+    const producto = cols[1].replace(/"/g, "").trim();
+    const precioRaw= cols[2].replace(/"/g, "").trim();
+    const precio   = parseFloat(precioRaw);
+
+    if (!fechaStr || !producto || isNaN(precio)) continue;
+    if (!datosProcesados[producto]) continue;
+
+    const fecha = parsearFecha(fechaStr);
+    if (!fecha || fecha < hace15) continue;
+
+    const clave = formatFecha(fecha); // "yyyy-MM-dd"
+    if (!datosProcesados[producto][clave]) datosProcesados[producto][clave] = [];
+    datosProcesados[producto][clave].push(precio);
+  }
+}
+
+function parsearLinea(linea) {
+  const cols = []; let actual = ""; let enComillas = false;
+  for (let c of linea) {
+    if (c === '"') { enComillas = !enComillas; }
+    else if (c === ',' && !enComillas) { cols.push(actual); actual = ""; }
+    else { actual += c; }
+  }
+  cols.push(actual);
+  return cols;
+}
+
+function parsearFecha(str) {
+  // "dd/MM/yyyy" o "dd/MM/yyyy HH:mm" o "yyyy-MM-dd"
+  str = str.split(" ")[0];
+  if (str.includes("/")) {
+    const p = str.split("/");
+    if (p.length === 3) {
+      if (p[2].length === 4) return new Date(+p[2], +p[1]-1, +p[0]);
+      if (p[0].length === 4) return new Date(+p[0], +p[1]-1, +p[2]);
+    }
+  }
+  if (str.includes("-")) {
+    const p = str.split("-");
+    if (p.length === 3) return new Date(+p[0], +p[1]-1, +p[2]);
+  }
+  return null;
+}
+
+function formatFecha(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const dia = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${dia}`;
+}
+
+function formatFechaDisplay(claveYMD) {
+  const [y, m, d] = claveYMD.split("-");
+  return `${d}/${m}`;
+}
+
+function promedio(arr) {
+  return arr.reduce((a,b) => a+b, 0) / arr.length;
+}
+
+// ── Generar últimas N fechas ─────────────────────────────────
+function ultimas15Fechas() {
+  const fechas = [];
+  const hoy = new Date();
+  for (let d = 14; d >= 0; d--) {
+    const f = new Date(hoy); f.setDate(hoy.getDate() - d);
+    fechas.push(formatFecha(f));
+  }
+  return fechas;
+}
+
+// ── Renderizar todo ──────────────────────────────────────────
+function renderizarTodo() {
+  const ahora = new Date();
+  const horaEcu = ahora.toLocaleString("es-EC", {
+    timeZone: "America/Guayaquil",
+    day:"2-digit", month:"2-digit", year:"numeric",
+    hour:"2-digit", minute:"2-digit"
+  });
+  document.getElementById("ultima-act").textContent = `Actualizado: ${horaEcu}`;
+  document.getElementById("nota-config").style.display =
+    ID_SHEET === "TU_ID_AQUI" ? "block" : "none";
+
+  const contenedor = document.getElementById("contenido-principal");
+  contenedor.innerHTML = `
+    <p class="selector-label">Selecciona un producto</p>
+    <div class="productos-grid" id="productos-grid"></div>
+
+    <div class="card" id="card-grafica">
+      <div id="resumen-precio"></div>
+      <div class="grafica-wrap"><canvas id="miGrafica"></canvas></div>
+      <div class="stats-row" id="stats-row"></div>
+    </div>
+
+    <div class="card">
+      <p class="selector-label" style="margin-bottom:14px">Resumen — todos los productos hoy</p>
+      <div class="tabla-wrap" id="tabla-resumen"></div>
+    </div>
+  `;
+
+  // Botones de productos
+  const grid = document.getElementById("productos-grid");
+  PRODUCTOS.forEach(p => {
+    const btn = document.createElement("button");
+    btn.className = "btn-prod" + (p.nombre === productoActivo ? " activo" : "");
+    btn.textContent = p.nombre;
+    btn.onclick = () => seleccionarProducto(p.nombre);
+    grid.appendChild(btn);
+  });
+
+  renderizarGrafica(productoActivo);
+  renderizarTablaResumen();
+}
+
+function seleccionarProducto(nombre) {
+  productoActivo = nombre;
+  document.querySelectorAll(".btn-prod").forEach(b => {
+    b.classList.toggle("activo", b.textContent === nombre);
+  });
+  renderizarGrafica(nombre);
+}
+
+// ── Gráfica de línea de tiempo ───────────────────────────────
+function renderizarGrafica(nombre) {
+  const prod = PRODUCTOS.find(p => p.nombre === nombre);
+  const fechas = ultimas15Fechas();
+  const datos  = datosProcesados[nombre] || {};
+
+  const labels  = fechas.map(f => formatFechaDisplay(f));
+  const valores = fechas.map(f => {
+    const arr = datos[f];
+    return arr && arr.length > 0 ? +promedio(arr).toFixed(2) : null;
+  });
+
+  // Calcular variación hoy vs ayer
+  const hoy  = formatFecha(new Date());
+  const ayer = formatFecha(new Date(Date.now() - 86400000));
+  const pHoy  = datos[hoy]  ? promedio(datos[hoy])  : null;
+  const pAyer = datos[ayer] ? promedio(datos[ayer]) : null;
+
+  let varPct = null, varClase = "nd", varTexto = "Sin datos recientes";
+  if (pHoy !== null && pAyer !== null) {
+    varPct = ((pHoy - pAyer) / pAyer) * 100;
+    if      (varPct >  2) { varClase = "sube";  varTexto = "vs ayer"; }
+    else if (varPct < -2) { varClase = "baja";  varTexto = "vs ayer"; }
+    else                  { varClase = "igual"; varTexto = "vs ayer"; }
+  } else if (pHoy !== null) {
+    varClase = "nd"; varTexto = "Solo datos de hoy";
+  }
+
+  // Mínimo y máximo del período
+  const todosValores = valores.filter(v => v !== null);
+  const minVal = todosValores.length ? Math.min(...todosValores) : null;
+  const maxVal = todosValores.length ? Math.max(...todosValores) : null;
+
+  // Renderizar resumen
+  document.getElementById("resumen-precio").innerHTML = `
+    <div class="resumen">
+      <div class="precio-actual">
+        <span class="precio-label">Precio promedio hoy</span>
+        <span class="precio-valor">${pHoy !== null ? "$" + pHoy.toFixed(2) : "—"}</span>
+        <span class="precio-unidad">${prod.unidad}</span>
+      </div>
+      <div class="variacion-box">
+        <span class="variacion-badge ${varClase}">
+          ${varPct !== null ? (varPct >= 0 ? "▲ " : "▼ ") + Math.abs(varPct).toFixed(1) + "%" : "—"}
+        </span>
+        <span class="variacion-desc">${varTexto}</span>
+      </div>
+    </div>
+  `;
+
+  // Stats
+  document.getElementById("stats-row").innerHTML = `
+    <div class="stat-box">
+      <div class="stat-val">${minVal !== null ? "$"+minVal.toFixed(2) : "—"}</div>
+      <div class="stat-lbl">Mínimo 15d</div>
+    </div>
+    <div class="stat-box highlight">
+      <div class="stat-val">${todosValores.length ? "$"+(todosValores.reduce((a,b)=>a+b,0)/todosValores.length).toFixed(2) : "—"}</div>
+      <div class="stat-lbl">Promedio 15d</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val">${maxVal !== null ? "$"+maxVal.toFixed(2) : "—"}</div>
+      <div class="stat-lbl">Máximo 15d</div>
+    </div>
+  `;
+
+  // Destruir gráfica anterior
+  if (grafica) { grafica.destroy(); grafica = null; }
+
+  const canvas = document.getElementById("miGrafica");
+  const colorLinea = varClase === "baja" ? "#DC2626" :
+                     varClase === "sube" ? "#059669" : "#1D9E75";
+
+  grafica = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: nombre,
+        data: valores,
+        borderColor: colorLinea,
+        backgroundColor: colorLinea + "15",
+        borderWidth: 2.5,
+        pointBackgroundColor: colorLinea,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        fill: true,
+        tension: 0.3,
+        spanGaps: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.parsed.y !== null
+              ? ` $${ctx.parsed.y.toFixed(2)} / ${prod.unidad}`
+              : " Sin datos"
+          },
+          backgroundColor: "#0F6E56",
+          titleColor: "#fff",
+          bodyColor: "#E1F5EE",
+          padding: 10,
+          cornerRadius: 8
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: "#F0F0F0" },
+          ticks: { font: { family: "DM Mono", size: 10 }, color: "#9CA3AF" }
+        },
+        y: {
+          grid: { color: "#F0F0F0" },
+          ticks: {
+            font: { family: "DM Mono", size: 10 },
+            color: "#9CA3AF",
+            callback: v => "$" + v.toFixed(2)
+          }
+        }
+      },
+      interaction: { mode: "index", intersect: false }
+    }
+  });
+}
+
+// ── Tabla resumen todos los productos ────────────────────────
+function renderizarTablaResumen() {
+  const hoy  = formatFecha(new Date());
+  const ayer = formatFecha(new Date(Date.now() - 86400000));
+
+  let html = `<table>
+    <thead><tr>
+      <th>Producto</th>
+      <th>Unidad</th>
+      <th>Hoy</th>
+      <th>Ayer</th>
+      <th>Variación</th>
+    </tr></thead><tbody>`;
+
+  PRODUCTOS.forEach(p => {
+    const datos = datosProcesados[p.nombre] || {};
+    const pHoy  = datos[hoy]  ? promedio(datos[hoy])  : null;
+    const pAyer = datos[ayer] ? promedio(datos[ayer]) : null;
+
+    let varStr = "—", varClase = "";
+    if (pHoy !== null && pAyer !== null) {
+      const pct = ((pHoy - pAyer) / pAyer) * 100;
+      const signo = pct >= 0 ? "▲ +" : "▼ ";
+      varStr  = signo + pct.toFixed(1) + "%";
+      varClase = pct > 2 ? "td-sube" : pct < -2 ? "td-baja" : "td-igual";
+    }
+
+    html += `<tr>
+      <td>${p.nombre}</td>
+      <td>${p.unidad}</td>
+      <td>${pHoy  !== null ? "$"+pHoy.toFixed(2)  : "—"}</td>
+      <td>${pAyer !== null ? "$"+pAyer.toFixed(2) : "—"}</td>
+      <td class="${varClase}">${varStr}</td>
+    </tr>`;
+  });
+
+  html += "</tbody></table>";
+  document.getElementById("tabla-resumen").innerHTML = html;
+}
+
+function mostrarError(msg) {
+  document.getElementById("contenido-principal").innerHTML = `
+    <div class="card vacio">
+      <div class="vacio-icon">⚠️</div>
+      <h3>No se pudieron cargar los datos</h3>
+      <p>${msg}<br><br>
+      Verifica que el ID del archivo sea correcto y que el archivo
+      esté compartido con acceso público de lectura.</p>
+    </div>`;
+}
+
+// ── Iniciar ──────────────────────────────────────────────────
+cargarDatos();
+</script>
+</body>
+</html>
