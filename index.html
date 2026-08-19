@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Precios Agrícolas — Izamba / Chunchibamba</title>
+<title>Feria Ambato — Precios al Día</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
@@ -117,10 +117,10 @@ footer{text-align:center;padding:16px;font-size:10px;color:var(--gris);}
 
 <header>
   <div class="hdr">
-    <div class="logo">🌱</div>
+    <div class="logo">📊</div>
     <div>
-      <h1>Precios Agrícolas</h1>
-      <p>Izamba · Chunchibamba · Mercado Mayorista Ambato</p>
+      <h1>Feria Ambato — Precios al Día</h1>
+      <p>Mercado Mayorista Ambato · Izamba · Chunchibamba</p>
     </div>
   </div>
   <div id="ultima-act">Cargando datos...</div>
@@ -128,7 +128,7 @@ footer{text-align:center;padding:16px;font-size:10px;color:var(--gris);}
 
 <main>
   <div class="nota" id="nota-config">
-    ⚙️ Reemplaza <strong>ID_SHEET</strong> en el código con el ID de tu Google Sheets y asegúrate que el archivo sea público.
+    ⚙️ Reemplaza <strong>ID_SHEET</strong> en el código con el ID de tu Google Sheets y asegúrate de que el archivo sea público.
   </div>
 
   <div id="contenido">
@@ -136,13 +136,13 @@ footer{text-align:center;padding:16px;font-size:10px;color:var(--gris);}
   </div>
 </main>
 
-<footer>Precios referenciales · Zona norte de Ambato · Actualizado diariamente</footer>
+<footer>Precios del mercado · Zona norte de Ambato · Actualizado cada día de feria</footer>
 
 <script>
 // ══════════════════════════════════════════════
 //  CONFIGURACIÓN
 // ══════════════════════════════════════════════
-const ID_SHEET    = "1fmGSrHQbcaLY5K7MWNDwsB_pvW0kQlV0p4Vm1G-ZLzQ";
+const ID_SHEET    = "TU_ID_AQUI";
 const NOMBRE_HOJA = "Datos_Largo";
 // ══════════════════════════════════════════════
 
@@ -245,11 +245,7 @@ function procesarCSV(csv) {
     if(cols.length<3) continue;
     const fechaStr = cols[0].replace(/"/g,"").trim();
     const producto = cols[1].replace(/"/g,"").trim();
-    //const precio   = parseFloat(cols[2].replace(/"/g,"").trim());
-    const precioRaw = cols[2].replace(/"/g,"").trim()
-                          .replace(/\./g,"")   // quita separadores de miles
-                          .replace(",",".");    // convierte coma decimal a punto
-    const precio = parseFloat(precioRaw);
+    const precio   = parseFloat(cols[2].replace(/"/g,"").trim());
     if(!fechaStr||!producto||isNaN(precio)) continue;
     if(!todosLosDatos[producto]) continue;
     const fecha = parsearFecha(fechaStr);
@@ -317,9 +313,9 @@ function renderizarTodo() {
   document.getElementById("contenido").innerHTML=`
     <div class="filtros">
       <div class="filtro-bloque">
-        <div class="sec-label">Productos — selecciona uno o varios para comparar</div>
+        <div class="sec-label">Producto</div>
         <div class="chips" id="chips-productos"></div>
-        <div class="hint">Toca un producto para agregarlo o quitarlo de la comparación</div>
+        <div class="hint">Selecciona uno o varios productos para comparar precios</div>
       </div>
       <div class="filtro-bloque">
         <div class="sec-label">Período</div>
@@ -327,13 +323,8 @@ function renderizarTodo() {
           <div class="sel-wrap"><span class="sel-label">Año</span><select id="sel-anio" onchange="onCambiarPeriodo()"></select></div>
           <div class="sel-wrap"><span class="sel-label">Mes</span><select id="sel-mes" onchange="onCambiarPeriodo()"></select></div>
         </div>
-        <div class="periodo-hint">Selecciona "Todos" en año y mes para ver el histórico completo</div>
+        <div class="periodo-hint">Selecciona año y mes para ver el histórico de precios</div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="sec-label" style="margin-bottom:12px">Resumen — todos los productos</div>
-      <div class="tabla-wrap" id="tabla-resumen"></div>
     </div>
 
     <div class="card" id="card-grafica">
@@ -341,6 +332,11 @@ function renderizarTodo() {
       <div class="leyenda" id="leyenda"></div>
       <div class="grafica-wrap"><canvas id="miGrafica"></canvas></div>
       <div class="stats-row" id="stats-row"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-label" style="margin-bottom:12px">Precios — último día de feria registrado</div>
+      <div class="tabla-wrap" id="tabla-resumen"></div>
     </div>
   `;
 
@@ -400,14 +396,8 @@ function actualizarGrafica() {
   const prods   = Array.from(productosSeleccionados);
 
   // Resumen por producto
-  // Últimas 2 fechas reales con datos — sin depender de hoy/ayer
-  const todasFechasDisp = new Set();
-  PRODUCTOS.forEach(p=>{
-    Object.keys(todosLosDatos[p.nombre]||{}).forEach(k=>todasFechasDisp.add(k));
-  });
-  const fechasDesc = Array.from(todasFechasDisp).sort().reverse();
-  const hoy  = fechasDesc[0] || fmtClave(new Date());
-  const ayer = fechasDesc[1] || fmtClave(new Date(Date.now()-86400000));
+  const hoy  = fmtClave(new Date());
+  const ayer = fmtClave(new Date(Date.now()-86400000));
   let resumenHTML="";
   let leyendaHTML="";
 
@@ -534,58 +524,30 @@ function actualizarGrafica() {
 }
 
 // ── Tabla resumen todos los productos ────────
-// ── Tabla resumen todos los productos ────────
 function renderizarTablaResumen() {
-
-  // Encontrar las 2 últimas fechas CON datos reales — sin depender de hoy/ayer
-  const todasFechas = new Set();
-  PRODUCTOS.forEach(p=>{
-    Object.keys(todosLosDatos[p.nombre]||{}).forEach(k=>todasFechas.add(k));
-  });
-  const fechasOrdenadas = Array.from(todasFechas).sort().reverse();
-  const fechaUltima    = fechasOrdenadas[0] || null;
-  const fechaPenultima = fechasOrdenadas[1] || null;
-
-  // Etiquetas legibles para el encabezado
-// Etiquetas con día de semana + fecha: "LUN 17/ago"
-  const DIAS  = ["DOM","LUN","MAR","MIÉ","JUE","VIE","SÁB"];
-  const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  function labelFecha(clave) {
-    if(!clave) return "—";
-    const [y,m,d] = clave.split("-");
-    const fecha = new Date(+y, +m-1, +d);
-    const dia   = DIAS[fecha.getDay()];
-    const mes   = MESES[fecha.getMonth()];
-    return `${dia} ${+d}/${mes}`;
-  }
-  const labelUltima    = labelFecha(fechaUltima);
-  const labelPenultima = labelFecha(fechaPenultima);
+  const hoy  = fmtClave(new Date());
+  const ayer = fmtClave(new Date(Date.now()-86400000));
   let html=`<table><thead><tr>
     <th>Producto</th><th>Unidad</th>
-    <th>${labelPenultima}</th>
-    <th>${labelUltima}</th>
-    <th>Variación</th>
+    <th>Hoy</th><th>Ayer</th><th>Variación</th>
   </tr></thead><tbody>`;
-
   PRODUCTOS.forEach(p=>{
-    const datos = todosLosDatos[p.nombre]||{};
-    const pH  = fechaUltima    && datos[fechaUltima]    ? promedio(datos[fechaUltima])    : null;
-    const pA  = fechaPenultima && datos[fechaPenultima] ? promedio(datos[fechaPenultima]) : null;
-
-    let vs="—", vc="";
-    if(pH!==null && pA!==null){
+    const datos=todosLosDatos[p.nombre]||{};
+    const pH=datos[hoy]?promedio(datos[hoy]):null;
+    const pA=datos[ayer]?promedio(datos[ayer]):null;
+    let vs="—",vc="";
+    if(pH!==null&&pA!==null){
       const pct=((pH-pA)/pA)*100;
       vs=(pct>=0?"▲ +":"▼ ")+pct.toFixed(1)+"%";
       vc=pct>2?"td-s":pct<-2?"td-b":"td-i";
     }
     html+=`<tr>
       <td>${p.nombre}</td><td>${p.unidad}</td>
-      <td>${pA!==null?"$"+pA.toFixed(2):"—"}</td>
       <td>${pH!==null?"$"+pH.toFixed(2):"—"}</td>
+      <td>${pA!==null?"$"+pA.toFixed(2):"—"}</td>
       <td class="${vc}">${vs}</td>
     </tr>`;
   });
-
   html+="</tbody></table>";
   document.getElementById("tabla-resumen").innerHTML=html;
 }
