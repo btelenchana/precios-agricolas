@@ -245,7 +245,11 @@ function procesarCSV(csv) {
     if(cols.length<3) continue;
     const fechaStr = cols[0].replace(/"/g,"").trim();
     const producto = cols[1].replace(/"/g,"").trim();
-    const precio   = parseFloat(cols[2].replace(/"/g,"").trim());
+    //const precio   = parseFloat(cols[2].replace(/"/g,"").trim());
+    const precioRaw = cols[2].replace(/"/g,"").trim()
+                          .replace(/\./g,"")   // quita separadores de miles
+                          .replace(",",".");    // convierte coma decimal a punto
+    const precio = parseFloat(precioRaw);
     if(!fechaStr||!producto||isNaN(precio)) continue;
     if(!todosLosDatos[producto]) continue;
     const fecha = parsearFecha(fechaStr);
