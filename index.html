@@ -400,8 +400,14 @@ function actualizarGrafica() {
   const prods   = Array.from(productosSeleccionados);
 
   // Resumen por producto
-  const hoy  = fmtClave(new Date());
-  const ayer = fmtClave(new Date(Date.now()-86400000));
+  // Últimas 2 fechas reales con datos — sin depender de hoy/ayer
+  const todasFechasDisp = new Set();
+  PRODUCTOS.forEach(p=>{
+    Object.keys(todosLosDatos[p.nombre]||{}).forEach(k=>todasFechasDisp.add(k));
+  });
+  const fechasDesc = Array.from(todasFechasDisp).sort().reverse();
+  const hoy  = fechasDesc[0] || fmtClave(new Date());
+  const ayer = fechasDesc[1] || fmtClave(new Date(Date.now()-86400000));
   let resumenHTML="";
   let leyendaHTML="";
 
@@ -528,19 +534,36 @@ function actualizarGrafica() {
 }
 
 // ── Tabla resumen todos los productos ────────
+// ── Tabla resumen todos los productos ────────
 function renderizarTablaResumen() {
-  const hoy  = fmtClave(new Date());
-  const ayer = fmtClave(new Date(Date.now()-86400000));
+
+  // Encontrar las 2 últimas fechas CON datos reales — sin depender de hoy/ayer
+  const todasFechas = new Set();
+  PRODUCTOS.forEach(p=>{
+    Object.keys(todosLosDatos[p.nombre]||{}).forEach(k=>todasFechas.add(k));
+  });
+  const fechasOrdenadas = Array.from(todasFechas).sort().reverse();
+  const fechaUltima    = fechasOrdenadas[0] || null;
+  const fechaPenultima = fechasOrdenadas[1] || null;
+
+  // Etiquetas legibles para el encabezado
+  const labelUltima    = fechaUltima    ? fmtDisplay(fechaUltima)    : "Último";
+  const labelPenultima = fechaPenultima ? fmtDisplay(fechaPenultima) : "Anterior";
+
   let html=`<table><thead><tr>
     <th>Producto</th><th>Unidad</th>
-    <th>Hoy</th><th>Ayer</th><th>Variación</th>
+    <th>${labelUltima} (último)</th>
+    <th>${labelPenultima} (anterior)</th>
+    <th>Variación</th>
   </tr></thead><tbody>`;
+
   PRODUCTOS.forEach(p=>{
-    const datos=todosLosDatos[p.nombre]||{};
-    const pH=datos[hoy]?promedio(datos[hoy]):null;
-    const pA=datos[ayer]?promedio(datos[ayer]):null;
-    let vs="—",vc="";
-    if(pH!==null&&pA!==null){
+    const datos = todosLosDatos[p.nombre]||{};
+    const pH  = fechaUltima    && datos[fechaUltima]    ? promedio(datos[fechaUltima])    : null;
+    const pA  = fechaPenultima && datos[fechaPenultima] ? promedio(datos[fechaPenultima]) : null;
+
+    let vs="—", vc="";
+    if(pH!==null && pA!==null){
       const pct=((pH-pA)/pA)*100;
       vs=(pct>=0?"▲ +":"▼ ")+pct.toFixed(1)+"%";
       vc=pct>2?"td-s":pct<-2?"td-b":"td-i";
@@ -552,6 +575,7 @@ function renderizarTablaResumen() {
       <td class="${vc}">${vs}</td>
     </tr>`;
   });
+
   html+="</tbody></table>";
   document.getElementById("tabla-resumen").innerHTML=html;
 }
