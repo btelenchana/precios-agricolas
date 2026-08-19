@@ -547,9 +547,19 @@ function renderizarTablaResumen() {
   const fechaPenultima = fechasOrdenadas[1] || null;
 
   // Etiquetas legibles para el encabezado
-  const labelUltima    = fechaUltima    ? fmtDisplay(fechaUltima)    : "Último";
-  const labelPenultima = fechaPenultima ? fmtDisplay(fechaPenultima) : "Anterior";
-
+// Etiquetas con día de semana + fecha: "LUN 17/ago"
+  const DIAS  = ["DOM","LUN","MAR","MIÉ","JUE","VIE","SÁB"];
+  const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  function labelFecha(clave) {
+    if(!clave) return "—";
+    const [y,m,d] = clave.split("-");
+    const fecha = new Date(+y, +m-1, +d);
+    const dia   = DIAS[fecha.getDay()];
+    const mes   = MESES[fecha.getMonth()];
+    return `${dia} ${+d}/${mes}`;
+  }
+  const labelUltima    = labelFecha(fechaUltima);
+  const labelPenultima = labelFecha(fechaPenultima);
   let html=`<table><thead><tr>
     <th>Producto</th><th>Unidad</th>
     <th>${labelUltima} (último)</th>
