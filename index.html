@@ -562,8 +562,8 @@ function renderizarTablaResumen() {
   const labelPenultima = labelFecha(fechaPenultima);
   let html=`<table><thead><tr>
     <th>Producto</th><th>Unidad</th>
-    <th>${labelUltima} (último)</th>
-    <th>${labelPenultima} (anterior)</th>
+    <th>${labelPenultima}</th>
+    <th>${labelUltima}</th>
     <th>Variación</th>
   </tr></thead><tbody>`;
 
@@ -580,8 +580,8 @@ function renderizarTablaResumen() {
     }
     html+=`<tr>
       <td>${p.nombre}</td><td>${p.unidad}</td>
-      <td>${pH!==null?"$"+pH.toFixed(2):"—"}</td>
       <td>${pA!==null?"$"+pA.toFixed(2):"—"}</td>
+      <td>${pH!==null?"$"+pH.toFixed(2):"—"}</td>
       <td class="${vc}">${vs}</td>
     </tr>`;
   });
